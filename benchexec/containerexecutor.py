@@ -626,7 +626,6 @@ class ContainerExecutor(baseexecutor.BaseExecutor):
                 my_outer_pid = container.get_my_pid_from_procfs()
 
                 container.mount_proc(self._container_system_config)
-                container.drop_capabilities()
                 container.reset_signal_handling()
                 child_setup_fn()  # Do some other setup the caller wants.
 
@@ -635,6 +634,8 @@ class ContainerExecutor(baseexecutor.BaseExecutor):
                 os.write(to_parent, str(my_outer_pid).encode())
                 received = os.read(from_parent, 1)
                 assert received == MARKER_PARENT_COMPLETED, received
+                libc.unshare(libc.CLONE_NEWCGROUP)
+                container.drop_capabilities()
             finally:
                 # close remaining ends of pipe
                 os.close(from_parent)
