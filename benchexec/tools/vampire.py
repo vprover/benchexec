@@ -115,7 +115,41 @@ class Tool(benchexec.tools.template.BaseTool2):
                 reasons.append(line[len(prefix) :])
         return reasons
 
+    def get_stat(self, output, key):
+        """
+        Extract the key-value pair from the output.
+        @param output: The output of the tool as instance of class RunOutput.
+        @param key: The key in the key-value structured output of Vampire.
+        @return a non-empty string, or None if the output does not contain the key.
+        """
+        for line in output:
+            if line.startswith("% " + key):
+                sl = line.strip().split(":")
+                if len(sl) == 2:
+                    return sl[1].strip()
+        return None
+
+    def get_schedule(self, output):
+        """
+        Extract the schedule which solved the output (if present).
+        @param output: The output of the tool as instance of class RunOutput.
+        @return a non-empty string, or None if the problem was not solved or mode was not portfolio.
+        """
+        i = 0
+        while i < len(output) and not output[i].startswith("% Refutation found. Thanks to Tanya!"): i += 1
+        if i == len(output): return None
+        i -= 1
+        while i >= 0:
+            line = output[i].strip().split()
+            if len(line) != 4 or line[0] != "%" or line[2] != "on" or line[1].count("_") < 3: i -= 1
+            else: return line[1]
+        return None
+
     def get_value_from_output(self, output, identifier):
         if identifier == "szs-status":
             return self.get_szs_status(output)
+        elif identifier == "schedule":
+            return self.get_schedule(output)
+        elif "Induction" in identifier:
+            return self.get_stat(output, identifier)
         return None
